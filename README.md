@@ -4,7 +4,7 @@
 
 Path Tracer is an interactive web application that visualizes popular pathfinding algorithms. It provides an intuitive interface to help users understand how different algorithms navigate through a grid from start to end points while avoiding obstacles.
 
-[View Live Demo](https://path-tracer.vercel.app)
+[View Live Demo](https://path-tracer.jakubolszewski.dev)
 
 ## Features
 
