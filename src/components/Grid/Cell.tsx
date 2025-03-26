@@ -88,7 +88,9 @@ const Cell: React.FC<CellProps> = ({
       case 'current':
         return 'Current Node';
       case 'frontier':
-        return `Frontier (f=${cell.fScore === Infinity ? '∞' : cell.fScore.toFixed(1)}, g=${cell.gScore === Infinity ? '∞' : cell.gScore})`;
+        const fScore = cell.fScore === Infinity ? '∞' : (typeof cell.fScore === 'number' ? cell.fScore.toFixed(1) : 'N/A');
+        const gScore = cell.gScore === Infinity ? '∞' : (typeof cell.gScore === 'number' ? cell.gScore : 'N/A');
+        return `Frontier (f=${fScore}, g=${gScore})`;
       default:
         return 'Empty';
     }
