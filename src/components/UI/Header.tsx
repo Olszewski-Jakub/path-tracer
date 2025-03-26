@@ -73,7 +73,7 @@ const Header: React.FC = () => {
 
                             {/* GitHub Repository Button */}
                             <Link
-                                href="https://github.com/yourusername/path-tracer"
+                                href="https://github.com/Olszewski-Jakub/path-tracer"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className={`inline-flex items-center justify-center px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -102,7 +102,7 @@ const Header: React.FC = () => {
 
                             {/* Portfolio Button */}
                             <Link
-                                href="https://yourportfolio.com"
+                                href="https://jakubolszewski.dev"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className={`inline-flex items-center justify-center px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
