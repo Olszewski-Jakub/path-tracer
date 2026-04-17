@@ -2,16 +2,6 @@ import React, { useState, useCallback, useRef } from 'react';
 import Cell from './Cell';
 import { GridMatrix, CellPosition } from '@/types';
 
-/**
- * React functional component representing a grid of cells.
- *
- * @param {GridProps} props - The properties passed to the component.
- * @param {GridMatrix} props.grid - The grid data representing the map with cells.
- * @param {function} props.onCellChange - Function to handle cell change events.
- * @param {boolean} props.isDisabled - Flag to indicate if the grid is disabled.
- * @param {boolean} [props.isDark=false] - Optional flag to indicate if the dark theme is enabled.
- * @returns {JSX.Element} The rendered grid component.
- */
 interface GridProps {
     grid: GridMatrix;
     onCellChange: (position: CellPosition) => void;
@@ -20,38 +10,26 @@ interface GridProps {
 }
 
 const Grid: React.FC<GridProps> = ({
-                                       grid,
-                                       onCellChange,
-                                       isDisabled,
-                                       isDark = false
-                                   }) => {
+    grid,
+    onCellChange,
+    isDisabled,
+    isDark = false,
+}) => {
     const [isMousePressed, setIsMousePressed] = useState(false);
     const gridRef = useRef<HTMLDivElement>(null);
 
-    /**
-     * Handles the mouse down event on a cell.
-     *
-     * @param {CellPosition} position - The position of the cell.
-     */
     const handleMouseDown = useCallback(
         (position: CellPosition) => {
             if (isDisabled) return;
-
             setIsMousePressed(true);
             onCellChange(position);
         },
         [onCellChange, isDisabled]
     );
 
-    /**
-     * Handles the mouse enter event on a cell.
-     *
-     * @param {CellPosition} position - The position of the cell.
-     */
     const handleMouseEnter = useCallback(
         (position: CellPosition) => {
             if (isDisabled) return;
-
             if (isMousePressed) {
                 onCellChange(position);
             }
@@ -59,44 +37,41 @@ const Grid: React.FC<GridProps> = ({
         [isMousePressed, onCellChange, isDisabled]
     );
 
-    /**
-     * Handles the mouse up event.
-     */
     const handleMouseUp = useCallback(() => {
         setIsMousePressed(false);
     }, []);
 
-    /**
-     * Adds a global mouse up event listener to handle mouse up events outside the grid.
-     */
     React.useEffect(() => {
-        const handleGlobalMouseUp = () => {
-            setIsMousePressed(false);
-        };
-
+        const handleGlobalMouseUp = () => setIsMousePressed(false);
         window.addEventListener('mouseup', handleGlobalMouseUp);
-
-        return () => {
-            window.removeEventListener('mouseup', handleGlobalMouseUp);
-        };
+        return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
     }, []);
 
     return (
         <div
-            className={`grid-container p-4 overflow-auto rounded-lg shadow-md ${
-                isDark ? 'bg-gray-800' : 'bg-gray-50'
-            }`}
+            style={{
+                padding: '16px',
+                borderRadius: '12px',
+                background: isDark
+                    ? 'linear-gradient(135deg, #080c14 0%, #0d1422 100%)'
+                    : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(15,23,42,0.1)',
+                boxShadow: isDark
+                    ? 'inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.4)'
+                    : 'inset 0 1px 0 rgba(255,255,255,0.8), 0 4px 24px rgba(15,23,42,0.08)',
+                overflow: 'auto',
+            }}
             ref={gridRef}
         >
             <div
-                className={`grid gap-0 ${
-                    isDisabled
-                        ? 'cursor-not-allowed opacity-80'
-                        : 'cursor-pointer'
-                }`}
                 style={{
+                    display: 'grid',
+                    gap: '1px',
                     gridTemplateColumns: `repeat(${grid[0].length}, 24px)`,
                     gridTemplateRows: `repeat(${grid.length}, 24px)`,
+                    cursor: isDisabled ? 'not-allowed' : 'crosshair',
+                    opacity: isDisabled ? 0.85 : 1,
+                    transition: 'opacity 0.2s ease',
                 }}
             >
                 {grid.map((row, rowIndex) =>

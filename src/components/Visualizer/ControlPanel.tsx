@@ -1,5 +1,4 @@
 import React from 'react';
-import { CellPosition, GridMatrix } from "@/types";
 
 interface LegendItem {
     label: string;
@@ -22,210 +21,235 @@ interface ControlPanelProps {
     setSpeed: (speed: number) => void;
     isDark: boolean;
     sidebarOpen: boolean;
-    legendItems?: LegendItem[]; // Add legend items prop
+    legendItems?: LegendItem[];
+}
+
+interface BtnConfig {
+    label: string;
+    icon: React.ReactNode;
+    onClick: () => void;
+    disabled: boolean;
+    style: React.CSSProperties;
+    disabledStyle: React.CSSProperties;
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
-                                                       isRunning,
-                                                       isPaused,
-                                                       isDone,
-                                                       speed,
-                                                       handleStart,
-                                                       handlePause,
-                                                       handleResume,
-                                                       handleStop,
-                                                       handleStep,
-                                                       handleClear,
-                                                       handleReset,
-                                                       handleGenerateMaze,
-                                                       setSpeed,
-                                                       isDark,
-                                                       sidebarOpen,
-                                                       legendItems = []
-                                                   }) => {
-    // Default legend items if not provided
-    const defaultLegendItems: LegendItem[] = [
-        { label: 'Start', color: 'bg-green-500' },
-        { label: 'End', color: 'bg-red-500' },
-        { label: 'Wall', color: isDark ? 'bg-gray-300' : 'bg-gray-800' },
-        { label: 'Visited', color: isDark ? 'bg-blue-500 bg-opacity-70' : 'bg-blue-400' },
-        { label: 'Path', color: 'bg-yellow-400' },
-        { label: 'Current', color: 'bg-purple-500' },
-        { label: 'Frontier', color: isDark ? 'bg-cyan-500 bg-opacity-70' : 'bg-cyan-400' },
+    isRunning,
+    isPaused,
+    isDone,
+    speed,
+    handleStart,
+    handlePause,
+    handleResume,
+    handleStop,
+    handleStep,
+    handleClear,
+    handleReset,
+    handleGenerateMaze,
+    setSpeed,
+    isDark,
+    sidebarOpen,
+}) => {
+    const disabledStyle: React.CSSProperties = {
+        background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)',
+        border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(15,23,42,0.07)',
+        color: isDark ? '#475569' : '#94a3b8',
+        cursor: 'not-allowed',
+    };
+
+    const playLabel = !isRunning && !isDone ? 'Start' : isPaused ? 'Resume' : 'Pause';
+    const playDisabled = isDone;
+
+    const playStyle: React.CSSProperties = isDone ? disabledStyle : isRunning && !isPaused ? {
+        background: 'linear-gradient(135deg, #d97706, #f59e0b)',
+        border: '1px solid rgba(245,158,11,0.4)',
+        boxShadow: '0 0 14px rgba(245,158,11,0.35)',
+        color: 'white',
+    } : {
+        background: 'linear-gradient(135deg, #059669, #10b981)',
+        border: '1px solid rgba(16,185,129,0.4)',
+        boxShadow: '0 0 14px rgba(16,185,129,0.35)',
+        color: 'white',
+    };
+
+    const buttons: BtnConfig[] = [
+        {
+            label: playLabel,
+            icon: !isRunning && !isDone ? (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ) : isPaused ? (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+            onClick: !isRunning && !isDone ? handleStart : isPaused ? handleResume : handlePause,
+            disabled: playDisabled,
+            style: playStyle,
+            disabledStyle,
+        },
+        {
+            label: 'Stop',
+            icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                </svg>
+            ),
+            onClick: handleStop,
+            disabled: !isRunning && !isPaused,
+            style: {
+                background: 'linear-gradient(135deg, #dc2626, #ef4444)',
+                border: '1px solid rgba(239,68,68,0.4)',
+                boxShadow: '0 0 14px rgba(239,68,68,0.3)',
+                color: 'white',
+            },
+            disabledStyle,
+        },
+        {
+            label: 'Step',
+            icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+            ),
+            onClick: handleStep,
+            disabled: isRunning || isDone,
+            style: {
+                background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                border: '1px solid rgba(168,85,247,0.4)',
+                boxShadow: '0 0 14px rgba(168,85,247,0.3)',
+                color: 'white',
+            },
+            disabledStyle,
+        },
+        {
+            label: 'Clear',
+            icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            ),
+            onClick: handleClear,
+            disabled: isRunning,
+            style: {
+                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.07)',
+                border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(15,23,42,0.12)',
+                color: isDark ? '#cbd5e1' : '#475569',
+            },
+            disabledStyle,
+        },
+        {
+            label: 'Reset',
+            icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            ),
+            onClick: handleReset,
+            disabled: isRunning,
+            style: {
+                background: 'linear-gradient(135deg, #0369a1, #0ea5e9)',
+                border: '1px solid rgba(14,165,233,0.4)',
+                boxShadow: '0 0 14px rgba(14,165,233,0.25)',
+                color: 'white',
+            },
+            disabledStyle,
+        },
+        {
+            label: 'Generate Maze',
+            icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+            ),
+            onClick: handleGenerateMaze,
+            disabled: isRunning,
+            style: {
+                background: 'linear-gradient(135deg, #065f46, #10b981)',
+                border: '1px solid rgba(16,185,129,0.35)',
+                boxShadow: '0 0 14px rgba(16,185,129,0.25)',
+                color: 'white',
+            },
+            disabledStyle,
+        },
     ];
 
-    // Use provided legend items or defaults
-    const displayLegendItems = legendItems.length > 0 ? legendItems : defaultLegendItems;
-
     return (
-        <div className="mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-            <div className="flex flex-wrap justify-between items-center mb-3">
-                {/* Playback Controls Bar */}
-                <div className={`flex items-center space-x-2 overflow-x-auto flex-grow ${!sidebarOpen ? 'justify-center' : ''}`}>
+        <div
+            className="px-4 py-3"
+            style={{
+                background: isDark ? 'rgba(8,12,20,0.8)' : 'rgba(248,250,252,0.8)',
+                borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(15,23,42,0.07)',
+            }}
+        >
+            <div className={`flex flex-wrap items-center gap-2 ${!sidebarOpen ? 'justify-center' : ''}`}>
+                {buttons.map((btn) => (
                     <button
-                        onClick={!isRunning && !isDone ? handleStart : isPaused ? handleResume : handlePause}
-                        disabled={isDone}
-                        className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
-                            isDone
-                                ? `${isDark ? 'bg-gray-800 text-gray-500' : 'bg-gray-200 text-gray-400'} cursor-not-allowed`
-                                : isRunning && !isPaused
-                                    ? `${isDark ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-yellow-500 hover:bg-yellow-600'} text-white`
-                                    : `${isDark ? 'bg-green-500 hover:bg-green-600' : 'bg-green-600 hover:bg-green-700'} text-white`
-                        }`}
+                        key={btn.label}
+                        onClick={btn.onClick}
+                        disabled={btn.disabled}
+                        style={{
+                            borderRadius: '10px',
+                            padding: '7px 14px',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s ease',
+                            ...(btn.disabled ? btn.disabledStyle : btn.style),
+                        }}
+                        className="hover:opacity-85 active:scale-95 transition-transform"
                     >
-                        {!isRunning && !isDone ? (
-                            <>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                     stroke="currentColor" className="w-4 h-4 mr-1">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                          d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                Start
-                            </>
-                        ) : isPaused ? (
-                            <>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                     stroke="currentColor" className="w-4 h-4 mr-1">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                          d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                Resume
-                            </>
-                        ) : (
-                            <>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                     stroke="currentColor" className="w-4 h-4 mr-1">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                          d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                Pause
-                            </>
-                        )}
+                        {btn.icon}
+                        {btn.label}
                     </button>
-
-                    <button
-                        onClick={handleStop}
-                        disabled={!isRunning && !isPaused}
-                        className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
-                            !isRunning && !isPaused
-                                ? `${isDark ? 'bg-gray-800 text-gray-500' : 'bg-gray-200 text-gray-400'} cursor-not-allowed`
-                                : `${isDark ? 'bg-red-500 hover:bg-red-600' : 'bg-red-600 hover:bg-red-700'} text-white`
-                        }`}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                             stroke="currentColor" className="w-4 h-4 mr-1">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                  d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>
-                        </svg>
-                        Stop
-                    </button>
-
-                    <button
-                        onClick={handleStep}
-                        disabled={isRunning || isDone}
-                        className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
-                            isRunning || isDone
-                                ? `${isDark ? 'bg-gray-800 text-gray-500' : 'bg-gray-200 text-gray-400'} cursor-not-allowed`
-                                : `${isDark ? 'bg-purple-500 hover:bg-purple-600' : 'bg-purple-600 hover:bg-purple-700'} text-white`
-                        }`}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                             stroke="currentColor" className="w-4 h-4 mr-1">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                  d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
-                        </svg>
-                        Step
-                    </button>
-
-                    <button
-                        onClick={handleClear}
-                        disabled={isRunning}
-                        className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
-                            isRunning
-                                ? `${isDark ? 'bg-gray-800 text-gray-500' : 'bg-gray-200 text-gray-400'} cursor-not-allowed`
-                                : `${isDark ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'} text-white`
-                        }`}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                             stroke="currentColor" className="w-4 h-4 mr-1">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        Clear
-                    </button>
-
-                    <button
-                        onClick={handleReset}
-                        disabled={isRunning}
-                        className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
-                            isRunning
-                                ? `${isDark ? 'bg-gray-800 text-gray-500' : 'bg-gray-200 text-gray-400'} cursor-not-allowed`
-                                : `${isDark ? 'bg-blue-500 hover:bg-blue-600' : 'bg-blue-600 hover:bg-blue-700'} text-white`
-                        }`}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                             stroke="currentColor" className="w-4 h-4 mr-1">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        Reset
-                    </button>
-
-                    <button
-                        onClick={handleGenerateMaze}
-                        disabled={isRunning}
-                        className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
-                            isRunning
-                                ? `${isDark ? 'bg-gray-800 text-gray-500' : 'bg-gray-200 text-gray-400'} cursor-not-allowed`
-                                : `${isDark ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-emerald-600 hover:bg-emerald-700'} text-white`
-                        }`}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                             stroke="currentColor" className="w-4 h-4 mr-1">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                  d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
-                        </svg>
-                        Generate Maze
-                    </button>
-
-                    {/* Speed control slider */}
-                    <div className="flex items-center space-x-2 pl-2 min-w-[180px]">
-                        <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Speed:</span>
-                        <input
-                            type="range"
-                            min="1"
-                            max="10"
-                            value={speed}
-                            onChange={(e) => setSpeed(parseInt(e.target.value))}
-                            disabled={isRunning && !isPaused}
-                            className={`flex-grow h-1.5 rounded-lg appearance-none cursor-pointer ${
-                                isDark ? 'bg-gray-700' : 'bg-gray-300'
-                            }`}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Legend */}
-            <div className={`flex flex-wrap items-center gap-2 pb-3 ${!sidebarOpen ? 'justify-center' : 'justify-start'}`}>
-                <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Legend:</span>
-                {displayLegendItems.map((item) => (
-                    <div
-                        key={item.label}
-                        className={`flex items-center px-2 py-0.5 rounded-full text-xs ${
-                            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                        } border transition-colors duration-200`}
-                    >
-                        <div className={`w-3 h-3 ${item.color} rounded-full mr-1.5`}></div>
-                        <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>{item.label}</span>
-                    </div>
                 ))}
+
+                {/* Speed control */}
+                <div
+                    className="flex items-center gap-3 ml-2"
+                    style={{
+                        background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.04)',
+                        border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(15,23,42,0.08)',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        minWidth: '180px',
+                    }}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        className="w-3.5 h-3.5 flex-shrink-0"
+                        style={{ color: 'var(--text-muted)' }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Speed</span>
+                    <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={speed}
+                        onChange={(e) => setSpeed(parseInt(e.target.value))}
+                        disabled={isRunning && !isPaused}
+                        className="flex-1"
+                        style={{ minWidth: '80px' }}
+                    />
+                    <span
+                        className="text-xs font-mono font-bold w-4 text-right flex-shrink-0"
+                        style={{
+                            color: 'var(--accent-primary)',
+                        }}
+                    >
+                        {speed}
+                    </span>
+                </div>
             </div>
         </div>
     );

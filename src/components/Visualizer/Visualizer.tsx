@@ -24,136 +24,62 @@ interface LegendItem {
 }
 
 const Visualizer: React.FC = () => {
-    // Theme detection
     const { isDark } = useThemeMode();
-
-    // Sidebar state management
     const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebar({ initialOpen: true });
 
-    // Grid state and operations
     const {
-        grid,
-        setGrid,
-        rows,
-        cols,
-        toggleCell,
-        updateSize,
-        resetGrid,
-        clearGrid,
-        generateMaze
+        grid, setGrid, rows, cols,
+        toggleCell, updateSize, resetGrid, clearGrid, generateMaze
     } = useGrid();
 
-    // Algorithm state and operations
     const {
-        algorithm,
-        isRunning,
-        isPaused,
-        isDone,
-        speed,
-        currentStep,
-        steps,
-        stepIndex,
-        showConfetti,
-        nodesExplored,
-        pathLength,
-        executionTime,
-        isPathFound,
-        changeAlgorithm,
-        changeSpeed,
-        start,
-        pause,
-        resume,
-        stop,
-        step: runSingleStep,
-        reset: resetAlgorithm
-    } = useAlgorithm({
-        initialAlgorithm: 'astar' as AlgorithmType,
-        grid,
-        setGrid
-    });
+        algorithm, isRunning, isPaused, isDone, speed, currentStep,
+        showConfetti, nodesExplored, pathLength, executionTime, isPathFound,
+        changeAlgorithm, changeSpeed, start, pause, resume, stop,
+        step: runSingleStep, reset: resetAlgorithm
+    } = useAlgorithm({ initialAlgorithm: 'astar' as AlgorithmType, grid, setGrid });
 
-    // Additional metrics
-    const { efficiencyScore } = useMetrics({
-        currentStep,
-        isDone
-    });
+    const { efficiencyScore } = useMetrics({ currentStep, isDone });
 
-    // Legend items definition
     const legendItems: LegendItem[] = [
-        {label: 'Start', color: 'bg-green-500'},
-        {label: 'End', color: 'bg-red-500'},
-        {label: 'Wall', color: isDark ? 'bg-gray-200' : 'bg-gray-800'},
-        {label: 'Visited', color: 'bg-blue-400'},
-        {label: 'Path', color: 'bg-yellow-400'},
-        {label: 'Current', color: 'bg-purple-500'},
-        {label: 'Frontier', color: 'bg-cyan-400'},
+        { label: 'Start', color: 'bg-green-500' },
+        { label: 'End', color: 'bg-red-500' },
+        { label: 'Wall', color: isDark ? 'bg-gray-200' : 'bg-gray-800' },
+        { label: 'Visited', color: 'bg-blue-400' },
+        { label: 'Path', color: 'bg-yellow-400' },
+        { label: 'Current', color: 'bg-purple-500' },
+        { label: 'Frontier', color: 'bg-cyan-400' },
     ];
 
-    // Handler functions combining hook operations
-    const handleAlgorithmChange = (newAlgorithm: AlgorithmType) => {
-        if (isRunning) return;
-        changeAlgorithm(newAlgorithm);
-    };
+    const handleAlgorithmChange = (a: AlgorithmType) => { if (!isRunning) changeAlgorithm(a); };
+    const handleSizeChange = (r: number, c: number) => { if (!isRunning) updateSize(r, c); };
+    const handleCellChange = (pos: { row: number; col: number }) => { if (isRunning && !isPaused) return; toggleCell(pos); };
+    const handleClear = () => { if (isRunning) return; resetAlgorithm(); clearGrid(); };
+    const handleReset = () => { if (isRunning) return; resetAlgorithm(); resetGrid(); };
+    const handleGenerateMaze = () => { if (isRunning) return; resetAlgorithm(); generateMaze(); };
 
-    const handleSizeChange = (newRows: number, newCols: number) => {
-        if (isRunning) return;
-        updateSize(newRows, newCols);
-    };
-
-    const handleCellChange = (position: { row: number, col: number }) => {
-        if (isRunning && !isPaused) return;
-        toggleCell(position);
-    };
-
-    const handleClear = () => {
-        if (isRunning) return;
-        resetAlgorithm();
-        clearGrid();
-    };
-
-    const handleReset = () => {
-        if (isRunning) return;
-        resetAlgorithm();
-        resetGrid();
-    };
-
-    const handleGenerateMaze = () => {
-        if (isRunning) return;
-        resetAlgorithm();
-        generateMaze();
-    };
-
-    // Status message component
     const getStatusMessage = (): React.ReactNode => {
         if (!currentStep) return null;
-
         if (isDone) {
             return isPathFound
-                ? <span className="text-green-500 font-medium">
-                    Path found! Explored {nodesExplored} nodes in {executionTime.toFixed(2)} ms.
-                  </span>
-                : <span className="text-red-500 font-medium">
-                    No path possible! All reachable nodes have been explored.
-                  </span>;
+                ? <span style={{ color: '#10b981', fontWeight: 600 }}>Path found! {nodesExplored} nodes explored in {executionTime.toFixed(2)} ms.</span>
+                : <span style={{ color: '#ef4444', fontWeight: 600 }}>No path possible. All reachable nodes explored.</span>;
         }
-
-        return <span>
-          Exploring node at ({currentStep.current?.row || 0}, {currentStep.current?.col || 0}).
-          Visited {nodesExplored} nodes so far.
-        </span>;
+        return <span>Exploring ({currentStep.current?.row ?? 0}, {currentStep.current?.col ?? 0}) &middot; {nodesExplored} nodes visited</span>;
     };
 
-    // Metrics object for components
-    const metrics = {
-        nodesExplored,
-        pathLength,
-        executionTime,
-        isPathFound
-    };
+    const metrics = { nodesExplored, pathLength, executionTime, isPathFound };
 
     return (
-        <div className={`min-h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'} `}>
-            {/* Algorithm Controls */}
+        <div
+            style={{
+                minHeight: 'calc(100vh - 60px)',
+                background: isDark
+                    ? 'radial-gradient(ellipse at top, #0f172a 0%, #080c14 60%)'
+                    : 'radial-gradient(ellipse at top, #e0e7ff 0%, #f8fafc 60%)',
+            }}
+        >
+            {/* Algorithm Controls bar */}
             <AlgorithmControls
                 algorithm={algorithm}
                 algorithmInfoMap={algorithmInfoMap}
@@ -201,10 +127,22 @@ const Visualizer: React.FC = () => {
                     />
                 )}
 
-                {/* Main content area */}
-                <main className={`flex-1 p-4 transition-all duration-300 ${sidebarOpen ? 'md:ml-0' : 'ml-0'}`}>
-                    {/* Visualization container */}
-                    <div className={`rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-md overflow-hidden`}>
+                <main
+                    className="flex-1 p-4 transition-all duration-300"
+                    style={{ minWidth: 0 }}
+                >
+                    {/* Grid container */}
+                    <div
+                        className="rounded-2xl overflow-hidden"
+                        style={{
+                            background: isDark ? 'rgba(13,20,34,0.7)' : 'rgba(255,255,255,0.7)',
+                            border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(15,23,42,0.08)',
+                            backdropFilter: 'blur(12px)',
+                            boxShadow: isDark
+                                ? '0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)'
+                                : '0 8px 40px rgba(15,23,42,0.1)',
+                        }}
+                    >
                         <StatusBar
                             isDark={isDark}
                             currentStep={currentStep}
@@ -212,8 +150,12 @@ const Visualizer: React.FC = () => {
                             legendItems={legendItems}
                         />
 
-                        {/* Grid visualization */}
-                        <div className={`p-4 overflow-auto ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+                        <div
+                            className="p-4 overflow-auto"
+                            style={{
+                                background: isDark ? '#080c14' : '#f1f5f9',
+                            }}
+                        >
                             <Grid
                                 grid={grid}
                                 onCellChange={handleCellChange}
@@ -223,7 +165,6 @@ const Visualizer: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Algorithm progress information */}
                     {currentStep && (
                         <AlgorithmProgress
                             isDark={isDark}
@@ -235,10 +176,9 @@ const Visualizer: React.FC = () => {
                 </main>
             </div>
 
-            {/* Confetti effect could be implemented here if needed */}
             {showConfetti && (
-                <div className="fixed inset-0 pointer-events-none">
-                    <ConfettiEffect/>
+                <div className="fixed inset-0 pointer-events-none z-50">
+                    <ConfettiEffect />
                 </div>
             )}
         </div>
