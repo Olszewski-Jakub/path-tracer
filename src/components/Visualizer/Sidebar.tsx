@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { AlgorithmInfo, AlgorithmType } from "@/types";
 import { RunRecord } from '@/hooks/useRunHistory';
