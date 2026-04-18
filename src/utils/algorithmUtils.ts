@@ -1,5 +1,12 @@
 import { AlgorithmInfo, AlgorithmType } from '@/types';
 
+export const ALGO_COLORS: Record<string, string> = {
+    astar:    '#6366f1',
+    dijkstra: '#06b6d4',
+    bfs:      '#10b981',
+    dfs:      '#f59e0b',
+};
+
 export const algorithmInfoMap: Record<AlgorithmType, AlgorithmInfo> = {
     astar: {
         name: 'A* Search',

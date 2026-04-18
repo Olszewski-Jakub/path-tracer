@@ -29,11 +29,12 @@ const Visualizer: React.FC = () => {
 
     const {
         grid, setGrid, rows, cols,
-        toggleCell, updateSize, resetGrid, clearGrid, generateMaze
+        toggleCell, updateSize, resetGrid, clearGrid, generateMaze,
+        isMazeGenerating,
     } = useGrid();
 
     const {
-        algorithm, isRunning, isPaused, isDone, speed, currentStep,
+        algorithm, isRunning, isPaused, isDone, isRevealingPath, speed, currentStep,
         showConfetti, nodesExplored, pathLength, executionTime, isPathFound,
         changeAlgorithm, changeSpeed, start, pause, resume, stop,
         step: runSingleStep, reset: resetAlgorithm
@@ -51,15 +52,22 @@ const Visualizer: React.FC = () => {
         { label: 'Frontier', color: 'bg-cyan-400' },
     ];
 
-    const handleAlgorithmChange = (a: AlgorithmType) => { if (!isRunning) changeAlgorithm(a); };
-    const handleSizeChange = (r: number, c: number) => { if (!isRunning) updateSize(r, c); };
-    const handleCellChange = (pos: { row: number; col: number }) => { if (isRunning && !isPaused) return; toggleCell(pos); };
-    const handleClear = () => { if (isRunning) return; resetAlgorithm(); clearGrid(); };
-    const handleReset = () => { if (isRunning) return; resetAlgorithm(); resetGrid(); };
-    const handleGenerateMaze = () => { if (isRunning) return; resetAlgorithm(); generateMaze(); };
+    const busy = isRunning || isRevealingPath || isMazeGenerating;
+
+    const handleAlgorithmChange = (a: AlgorithmType) => { if (!busy) changeAlgorithm(a); };
+    const handleSizeChange = (r: number, c: number) => { if (!busy) updateSize(r, c); };
+    const handleCellChange = (pos: { row: number; col: number }) => {
+        if (busy && !isPaused) return;
+        toggleCell(pos);
+    };
+    const handleClear = () => { if (busy) return; resetAlgorithm(); clearGrid(); };
+    const handleReset = () => { if (busy) return; resetAlgorithm(); resetGrid(); };
+    const handleGenerateMaze = () => { if (busy) return; resetAlgorithm(); generateMaze(); };
 
     const getStatusMessage = (): React.ReactNode => {
+        if (isMazeGenerating) return <span style={{ color: '#10b981', fontWeight: 600 }}>Generating maze…</span>;
         if (!currentStep) return null;
+        if (isRevealingPath) return <span style={{ color: '#f59e0b', fontWeight: 600 }}>Tracing path…</span>;
         if (isDone) {
             return isPathFound
                 ? <span style={{ color: '#10b981', fontWeight: 600 }}>Path found! {nodesExplored} nodes explored in {executionTime.toFixed(2)} ms.</span>
@@ -96,6 +104,8 @@ const Visualizer: React.FC = () => {
                 isRunning={isRunning}
                 isPaused={isPaused}
                 isDone={isDone}
+                isRevealingPath={isRevealingPath}
+                isMazeGenerating={isMazeGenerating}
                 speed={speed}
                 handleStart={start}
                 handlePause={pause}
@@ -159,7 +169,7 @@ const Visualizer: React.FC = () => {
                             <Grid
                                 grid={grid}
                                 onCellChange={handleCellChange}
-                                isDisabled={isRunning && !isPaused}
+                                isDisabled={busy && !isPaused}
                                 isDark={isDark}
                             />
                         </div>
@@ -168,8 +178,10 @@ const Visualizer: React.FC = () => {
                     {currentStep && (
                         <AlgorithmProgress
                             isDark={isDark}
+                            algorithm={algorithm}
                             metrics={metrics}
                             isDone={isDone}
+                            isRevealingPath={isRevealingPath}
                             currentStep={currentStep}
                         />
                     )}

@@ -9,12 +9,7 @@ interface GridProps {
     isDark?: boolean;
 }
 
-const Grid: React.FC<GridProps> = ({
-    grid,
-    onCellChange,
-    isDisabled,
-    isDark = false,
-}) => {
+const Grid: React.FC<GridProps> = ({ grid, onCellChange, isDisabled, isDark = false }) => {
     const [isMousePressed, setIsMousePressed] = useState(false);
     const gridRef = useRef<HTMLDivElement>(null);
 
@@ -29,42 +24,56 @@ const Grid: React.FC<GridProps> = ({
 
     const handleMouseEnter = useCallback(
         (position: CellPosition) => {
-            if (isDisabled) return;
-            if (isMousePressed) {
-                onCellChange(position);
-            }
+            if (isDisabled || !isMousePressed) return;
+            onCellChange(position);
         },
         [isMousePressed, onCellChange, isDisabled]
     );
 
-    const handleMouseUp = useCallback(() => {
-        setIsMousePressed(false);
-    }, []);
+    const handleMouseUp = useCallback(() => setIsMousePressed(false), []);
 
     React.useEffect(() => {
-        const handleGlobalMouseUp = () => setIsMousePressed(false);
-        window.addEventListener('mouseup', handleGlobalMouseUp);
-        return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+        const up = () => setIsMousePressed(false);
+        window.addEventListener('mouseup', up);
+        return () => window.removeEventListener('mouseup', up);
     }, []);
 
     return (
         <div
+            ref={gridRef}
             style={{
+                position: 'relative',
                 padding: '16px',
                 borderRadius: '12px',
                 background: isDark
                     ? 'linear-gradient(135deg, #080c14 0%, #0d1422 100%)'
                     : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
-                border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(15,23,42,0.1)',
+                border: isDark
+                    ? '1px solid rgba(255,255,255,0.06)'
+                    : '1px solid rgba(15,23,42,0.1)',
                 boxShadow: isDark
                     ? 'inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.4)'
                     : 'inset 0 1px 0 rgba(255,255,255,0.8), 0 4px 24px rgba(15,23,42,0.08)',
                 overflow: 'auto',
             }}
-            ref={gridRef}
         >
+            {/* Dot pattern overlay */}
+            <div
+                className="grid-dot-pattern"
+                style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: '12px',
+                    pointerEvents: 'none',
+                    zIndex: 0,
+                }}
+            />
+
+            {/* Cell grid */}
             <div
                 style={{
+                    position: 'relative',
+                    zIndex: 1,
                     display: 'grid',
                     gap: '1px',
                     gridTemplateColumns: `repeat(${grid[0].length}, 24px)`,
