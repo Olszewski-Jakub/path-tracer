@@ -256,72 +256,111 @@ export function* generateRecursiveBacktrackingMaze(
     startPos: CellPosition,
     endPos: CellPosition
 ): Generator<MazeStep, MazeStep, unknown> {
-    // Start with all walls
+    // Fill with walls
     const grid = createEmptyGrid(rows, cols);
     for (let r = 0; r < rows; r++)
         for (let c = 0; c < cols; c++)
             grid[r][c] = { ...grid[r][c], type: 'wall' };
 
+    // Passage nodes sit at ODD row AND ODD col, strictly inside the border.
+    // Wall cells between them (one step away) get carved when connecting nodes.
+    const isPassageNode = (r: number, c: number) =>
+        r % 2 === 1 && c % 2 === 1 && r >= 1 && r <= rows - 2 && c >= 1 && c <= cols - 2;
+
+    // Snap any position to the nearest valid passage node.
+    const snapToPassage = (r: number, c: number): [number, number] => {
+        const sr = r % 2 === 0 ? (r - 1 >= 1 ? r - 1 : r + 1) : r;
+        const sc = c % 2 === 0 ? (c - 1 >= 1 ? c - 1 : c + 1) : c;
+        return [Math.max(1, Math.min(rows - 2, sr)), Math.max(1, Math.min(cols - 2, sc))];
+    };
+
+    const [sr, sc] = snapToPassage(startPos.row, startPos.col);
+    const [er, ec] = snapToPassage(endPos.row, endPos.col);
+
     const visited = new Set<string>();
-    const stack: CellPosition[] = [];
-
     const key = (r: number, c: number) => `${r},${c}`;
-    // Valid carve targets: inside border, on even coords (the passage cells)
-    const isPassageCell = (r: number, c: number) =>
-        r > 0 && r < rows - 1 && c > 0 && c < cols - 1;
 
-    // Snap start carve origin to odd grid coords so passages align
-    const sr = startPos.row % 2 === 0 ? Math.min(startPos.row + 1, rows - 2) : startPos.row;
-    const sc = startPos.col % 2 === 0 ? Math.min(startPos.col + 1, cols - 2) : startPos.col;
+    // Helper — snapshot with start/end overlaid on their actual positions
+    const snap = () => {
+        const g = JSON.parse(JSON.stringify(grid)) as GridMatrix;
+        g[startPos.row][startPos.col] = { ...g[startPos.row][startPos.col], type: 'start', distance: 0, fScore: 0, gScore: 0 };
+        g[endPos.row][endPos.col] = { ...g[endPos.row][endPos.col], type: 'end' };
+        return g;
+    };
 
+    // Open first passage node
     grid[sr][sc] = { ...grid[sr][sc], type: 'empty' };
     visited.add(key(sr, sc));
-    stack.push({ row: sr, col: sc });
+    const stack: [number, number][] = [[sr, sc]];
 
-    // Yield initial state (all walls except first passage cell)
-    const snap0 = JSON.parse(JSON.stringify(grid)) as GridMatrix;
-    snap0[startPos.row][startPos.col] = { ...snap0[startPos.row][startPos.col], type: 'start', distance: 0, fScore: 0, gScore: 0 };
-    snap0[endPos.row][endPos.col] = { ...snap0[endPos.row][endPos.col], type: 'end' };
-    yield { grid: snap0, isDone: false };
+    yield { grid: snap(), isDone: false };
 
-    // 4 directions, 2 cells at a time (skip over a wall cell)
     const DIRS: [number, number][] = [[-2, 0], [2, 0], [0, -2], [0, 2]];
 
+    // DFS recursive backtracking — visits every passage node exactly once
     while (stack.length > 0) {
-        const { row: cr, col: cc } = stack[stack.length - 1];
+        const [cr, cc] = stack[stack.length - 1];
+        // Shuffle directions so each run produces a different maze
+        const dirs = [...DIRS].sort(() => Math.random() - 0.5);
+        let moved = false;
 
-        // Shuffle directions to get different mazes each run
-        const shuffled = [...DIRS].sort(() => Math.random() - 0.5);
-        let carved = false;
-
-        for (const [dr, dc] of shuffled) {
+        for (const [dr, dc] of dirs) {
             const nr = cr + dr;
             const nc = cc + dc;
-            if (isPassageCell(nr, nc) && !visited.has(key(nr, nc))) {
-                // Carve the wall cell between current and neighbor
-                const wr = cr + dr / 2;
-                const wc = cc + dc / 2;
-                grid[wr][wc] = { ...grid[wr][wc], type: 'empty' };
+            if (isPassageNode(nr, nc) && !visited.has(key(nr, nc))) {
+                // Carve the wall cell between the two passage nodes
+                grid[cr + dr / 2][cc + dc / 2] = { ...grid[cr + dr / 2][cc + dc / 2], type: 'empty' };
                 grid[nr][nc] = { ...grid[nr][nc], type: 'empty' };
                 visited.add(key(nr, nc));
-                stack.push({ row: nr, col: nc });
-                carved = true;
-
-                // Yield a snapshot after carving each passage
-                const snap = JSON.parse(JSON.stringify(grid)) as GridMatrix;
-                snap[startPos.row][startPos.col] = { ...snap[startPos.row][startPos.col], type: 'start', distance: 0, fScore: 0, gScore: 0 };
-                snap[endPos.row][endPos.col] = { ...snap[endPos.row][endPos.col], type: 'end' };
-                yield { grid: snap, isDone: false };
+                stack.push([nr, nc]);
+                moved = true;
+                yield { grid: snap(), isDone: false };
                 break;
             }
         }
 
-        if (!carved) {
-            stack.pop();
-        }
+        if (!moved) stack.pop();
     }
 
-    // Final state: place start and end definitively
+    // Add loops: knock out a fraction of wall cells that sit between two open passage
+    // cells. This creates multiple routes and makes the maze feel more complex.
+    const removableWalls: [number, number][] = [];
+    for (let r = 1; r < rows - 1; r++) {
+        for (let c = 1; c < cols - 1; c++) {
+            if (grid[r][c].type !== 'wall') continue;
+            // Horizontal wall between two horizontal passage nodes
+            const horizOk = r % 2 === 1 && c % 2 === 0
+                && grid[r][c - 1]?.type === 'empty'
+                && grid[r][c + 1]?.type === 'empty';
+            // Vertical wall between two vertical passage nodes
+            const vertOk = r % 2 === 0 && c % 2 === 1
+                && grid[r - 1]?.[c]?.type === 'empty'
+                && grid[r + 1]?.[c]?.type === 'empty';
+            if (horizOk || vertOk) removableWalls.push([r, c]);
+        }
+    }
+    const loopCount = Math.floor(removableWalls.length * 0.18);
+    for (const [r, c] of removableWalls.sort(() => Math.random() - 0.5).slice(0, loopCount)) {
+        grid[r][c] = { ...grid[r][c], type: 'empty' };
+        yield { grid: snap(), isDone: false };
+    }
+
+    // Guarantee the actual start/end cells are open and connected to the nearest
+    // passage node (needed when they fall on even coordinates, e.g. even-sized grids).
+    const carveToSnapped = (fromR: number, fromC: number, toR: number, toC: number) => {
+        grid[fromR][fromC] = { ...grid[fromR][fromC], type: 'empty' };
+        let r = fromR;
+        let c = fromC;
+        while (r !== toR || c !== toC) {
+            if (r !== toR) r += toR > fromR ? 1 : -1;
+            else c += toC > fromC ? 1 : -1;
+            grid[r][c] = { ...grid[r][c], type: 'empty' };
+        }
+    };
+
+    carveToSnapped(startPos.row, startPos.col, sr, sc);
+    carveToSnapped(endPos.row, endPos.col, er, ec);
+
     const finalGrid = JSON.parse(JSON.stringify(grid)) as GridMatrix;
     finalGrid[startPos.row][startPos.col] = { ...finalGrid[startPos.row][startPos.col], type: 'start', distance: 0, fScore: 0, gScore: 0 };
     finalGrid[endPos.row][endPos.col] = { ...finalGrid[endPos.row][endPos.col], type: 'end' };
