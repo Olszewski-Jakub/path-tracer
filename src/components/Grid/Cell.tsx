@@ -7,12 +7,13 @@ interface CellProps {
     onMouseEnter: (position: CellPosition) => void;
     onMouseUp: () => void;
     isDark?: boolean;
+    isDragging?: boolean;
+    isGhostTarget?: boolean;
+    ghostType?: 'start' | 'end';
 }
 
-// Types that trigger a CSS animation when entered
 const ANIMATED_TYPES = new Set(['visited', 'path', 'current', 'frontier', 'wall']);
 
-// Return the CSS class responsible for the cell's animation
 function getAnimationClass(type: string): string {
     switch (type) {
         case 'visited':  return 'animate-visit-pop';
@@ -24,7 +25,6 @@ function getAnimationClass(type: string): string {
     }
 }
 
-// Outer (stable, never re-keyed) fill styles per type
 function getCellBg(type: string, isDark: boolean): React.CSSProperties {
     switch (type) {
         case 'start':
@@ -86,8 +86,8 @@ function getCellBg(type: string, isDark: boolean): React.CSSProperties {
 
 function getTooltipText(cell: CellType): string {
     switch (cell.type) {
-        case 'start':    return 'Start Node';
-        case 'end':      return 'End Node';
+        case 'start':    return 'Start Node (drag to move)';
+        case 'end':      return 'End Node (drag to move)';
         case 'wall':     return 'Wall';
         case 'visited':  return `Visited (dist: ${cell.distance === Infinity ? '∞' : cell.distance})`;
         case 'path':     return 'Path';
@@ -101,10 +101,12 @@ function getTooltipText(cell: CellType): string {
     }
 }
 
-const Cell: React.FC<CellProps> = ({ cell, onMouseDown, onMouseEnter, onMouseUp, isDark = false }) => {
+const Cell: React.FC<CellProps> = ({
+    cell, onMouseDown, onMouseEnter, onMouseUp,
+    isDark = false, isDragging = false, isGhostTarget = false, ghostType,
+}) => {
     const { position, type } = cell;
 
-    // Track type changes so we can bump the animationKey to restart CSS animations
     const prevTypeRef = useRef<string | undefined>(undefined);
     const [animationKey, setAnimationKey] = useState(0);
 
@@ -120,21 +122,42 @@ const Cell: React.FC<CellProps> = ({ cell, onMouseDown, onMouseEnter, onMouseUp,
     const bgStyle = getCellBg(type, isDark);
     const animClass = getAnimationClass(type);
 
+    const outerStyle: React.CSSProperties = {
+        width: '24px',
+        height: '24px',
+        position: 'relative',
+        cursor: (type === 'start' || type === 'end') ? 'grab' : 'inherit',
+        flexShrink: 0,
+        opacity: isDragging ? 0.35 : 1,
+        transition: 'opacity 0.15s ease',
+    };
+
     return (
         <div
-            style={{
-                width: '24px',
-                height: '24px',
-                position: 'relative',
-                cursor: 'pointer',
-                flexShrink: 0,
-            }}
+            style={outerStyle}
             onMouseDown={() => onMouseDown(position)}
             onMouseEnter={() => onMouseEnter(position)}
             onMouseUp={onMouseUp}
             title={getTooltipText(cell)}
         >
-            {/* Inner div is re-keyed on every animated type change → restarts CSS animation */}
+            {/* Ghost drop target overlay */}
+            {isGhostTarget && ghostType && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        zIndex: 10,
+                        borderRadius: '3px',
+                        background: ghostType === 'start'
+                            ? 'rgba(16,185,129,0.35)'
+                            : 'rgba(239,68,68,0.35)',
+                        border: `2px dashed ${ghostType === 'start' ? '#10b981' : '#ef4444'}`,
+                        pointerEvents: 'none',
+                    }}
+                />
+            )}
+
+            {/* Inner div re-keyed on animated type change → restarts CSS animation */}
             <div
                 key={animationKey}
                 className={animClass}
@@ -164,5 +187,7 @@ export default memo(Cell, (prev, next) => {
     if (prev.cell.position.row !== next.cell.position.row) return false;
     if (prev.cell.position.col !== next.cell.position.col) return false;
     if (prev.isDark !== next.isDark) return false;
+    if (prev.isDragging !== next.isDragging) return false;
+    if (prev.isGhostTarget !== next.isGhostTarget) return false;
     return true;
 });

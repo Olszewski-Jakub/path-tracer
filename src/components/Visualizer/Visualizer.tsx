@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Grid } from '@/components/Grid';
 import {
     AlgorithmControls,
@@ -11,12 +11,14 @@ import {
     ConfettiEffect
 } from "@/components/Visualizer/index";
 import { algorithmInfoMap } from '@/utils/algorithmUtils';
+import { copyGridUrlToClipboard } from '@/utils/urlUtils';
 import { useGrid } from '@/hooks/useGrid';
 import { useAlgorithm } from '@/hooks/useAlgorithm';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useThemeMode } from '@/hooks/useTheme';
-import { AlgorithmType } from '@/types';
+import { useRunHistory } from '@/hooks/useRunHistory';
+import { AlgorithmType, CellPosition } from '@/types';
 
 interface LegendItem {
     label: string;
@@ -27,9 +29,13 @@ const Visualizer: React.FC = () => {
     const { isDark } = useThemeMode();
     const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebar({ initialOpen: true });
 
+    const [allowDiagonals, setAllowDiagonals] = useState(false);
+    const [drawMode, setDrawMode] = useState<'wall' | 'erase'>('wall');
+
     const {
         grid, setGrid, rows, cols,
-        toggleCell, updateSize, resetGrid, clearGrid, generateMaze,
+        toggleCell, eraseCell, moveNode,
+        updateSize, resetGrid, clearGrid, generateMaze, loadPreset,
         isMazeGenerating,
     } = useGrid();
 
@@ -37,10 +43,31 @@ const Visualizer: React.FC = () => {
         algorithm, isRunning, isPaused, isDone, isRevealingPath, speed, currentStep,
         showConfetti, nodesExplored, pathLength, executionTime, isPathFound,
         changeAlgorithm, changeSpeed, start, pause, resume, stop,
-        step: runSingleStep, reset: resetAlgorithm
-    } = useAlgorithm({ initialAlgorithm: 'astar' as AlgorithmType, grid, setGrid });
+        step: runSingleStep, reset: resetAlgorithm,
+    } = useAlgorithm({
+        initialAlgorithm: 'astar' as AlgorithmType,
+        grid,
+        setGrid,
+        config: { allowDiagonals },
+    });
 
     const { efficiencyScore } = useMetrics({ currentStep, isDone });
+    const { history: runHistory, addRun, clearHistory } = useRunHistory();
+
+    // Record completed runs
+    const prevIsDone = useRef(false);
+    useEffect(() => {
+        if (isDone && !prevIsDone.current && currentStep) {
+            addRun({
+                algorithm,
+                nodesExplored: currentStep.nodesExplored ?? 0,
+                pathLength: currentStep.path?.length ?? 0,
+                executionTime: currentStep.executionTime ?? 0,
+                isPathFound: currentStep.isPathFound ?? false,
+            });
+        }
+        prevIsDone.current = isDone;
+    }, [isDone, currentStep, algorithm, addRun]);
 
     const legendItems: LegendItem[] = [
         { label: 'Start', color: 'bg-green-500' },
@@ -56,24 +83,89 @@ const Visualizer: React.FC = () => {
 
     const handleAlgorithmChange = (a: AlgorithmType) => { if (!busy) changeAlgorithm(a); };
     const handleSizeChange = (r: number, c: number) => { if (!busy) updateSize(r, c); };
-    const handleCellChange = (pos: { row: number; col: number }) => {
+
+    const handleCellChange = (pos: CellPosition) => {
         if (busy && !isPaused) return;
-        toggleCell(pos);
+        if (drawMode === 'erase') {
+            eraseCell(pos);
+        } else {
+            toggleCell(pos);
+        }
     };
+
+    const handleEraseCell = (pos: CellPosition) => {
+        if (busy && !isPaused) return;
+        eraseCell(pos);
+    };
+
+    const handleNodeMove = (type: 'start' | 'end', from: CellPosition, to: CellPosition) => {
+        if (busy) return;
+        moveNode(type, from, to);
+        resetAlgorithm();
+    };
+
     const handleClear = () => { if (busy) return; resetAlgorithm(); clearGrid(); };
     const handleReset = () => { if (busy) return; resetAlgorithm(); resetGrid(); };
     const handleGenerateMaze = () => { if (busy) return; resetAlgorithm(); generateMaze(); };
+    const handleShareGrid = () => copyGridUrlToClipboard(grid);
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+            switch (e.key) {
+                case ' ':
+                    e.preventDefault();
+                    if (!busy && !isDone) start();
+                    else if (isRunning && !isPaused) pause();
+                    else if (isPaused) resume();
+                    break;
+                case 'r': case 'R':
+                    if (!busy) { resetAlgorithm(); resetGrid(); }
+                    break;
+                case 'c': case 'C':
+                    if (!busy) { resetAlgorithm(); clearGrid(); }
+                    break;
+                case 'm': case 'M':
+                    if (!busy) { resetAlgorithm(); generateMaze(); }
+                    break;
+                case 's': case 'S':
+                    if (!busy && !isDone) runSingleStep();
+                    break;
+                case 'w': case 'W':
+                    setDrawMode('wall');
+                    break;
+                case 'e': case 'E':
+                    setDrawMode('erase');
+                    break;
+                case 'ArrowRight':
+                    changeSpeed(Math.min(10, speed + 1));
+                    break;
+                case 'ArrowLeft':
+                    changeSpeed(Math.max(1, speed - 1));
+                    break;
+                case '1': changeAlgorithm('astar'); break;
+                case '2': changeAlgorithm('dijkstra'); break;
+                case '3': changeAlgorithm('bfs'); break;
+                case '4': changeAlgorithm('dfs'); break;
+                case '5': changeAlgorithm('greedy'); break;
+                case '6': changeAlgorithm('bidirectional'); break;
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [busy, isDone, isRunning, isPaused, speed, start, pause, resume, stop, resetAlgorithm, resetGrid, clearGrid, generateMaze, runSingleStep, changeSpeed, changeAlgorithm]);
 
     const getStatusMessage = (): React.ReactNode => {
         if (isMazeGenerating) return <span style={{ color: '#10b981', fontWeight: 600 }}>Generating maze…</span>;
-        if (!currentStep) return null;
+        if (!currentStep) return <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Space to start · W/E draw/erase · 1-6 switch algorithm</span>;
         if (isRevealingPath) return <span style={{ color: '#f59e0b', fontWeight: 600 }}>Tracing path…</span>;
         if (isDone) {
             return isPathFound
-                ? <span style={{ color: '#10b981', fontWeight: 600 }}>Path found! {nodesExplored} nodes explored in {executionTime.toFixed(2)} ms.</span>
+                ? <span style={{ color: '#10b981', fontWeight: 600 }}>Path found! {nodesExplored} nodes in {executionTime.toFixed(2)} ms.</span>
                 : <span style={{ color: '#ef4444', fontWeight: 600 }}>No path possible. All reachable nodes explored.</span>;
         }
-        return <span>Exploring ({currentStep.current?.row ?? 0}, {currentStep.current?.col ?? 0}) &middot; {nodesExplored} nodes visited</span>;
+        return <span>Exploring ({currentStep.current?.row ?? 0}, {currentStep.current?.col ?? 0}) · {nodesExplored} nodes visited</span>;
     };
 
     const metrics = { nodesExplored, pathLength, executionTime, isPathFound };
@@ -107,6 +199,8 @@ const Visualizer: React.FC = () => {
                 isRevealingPath={isRevealingPath}
                 isMazeGenerating={isMazeGenerating}
                 speed={speed}
+                drawMode={drawMode}
+                setDrawMode={setDrawMode}
                 handleStart={start}
                 handlePause={pause}
                 handleResume={resume}
@@ -130,10 +224,17 @@ const Visualizer: React.FC = () => {
                         cols={cols}
                         handleSizeChange={handleSizeChange}
                         isRunning={isRunning}
+                        isBusy={busy}
                         metrics={metrics}
                         isDone={isDone}
                         getEfficiencyScore={() => efficiencyScore}
                         isDark={isDark}
+                        allowDiagonals={allowDiagonals}
+                        setAllowDiagonals={setAllowDiagonals}
+                        loadPreset={(preset) => { if (!busy) { resetAlgorithm(); loadPreset(preset); } }}
+                        onShareGrid={handleShareGrid}
+                        runHistory={runHistory}
+                        clearHistory={clearHistory}
                     />
                 )}
 
@@ -141,7 +242,6 @@ const Visualizer: React.FC = () => {
                     className="flex-1 p-4 transition-all duration-300"
                     style={{ minWidth: 0 }}
                 >
-                    {/* Grid container */}
                     <div
                         className="rounded-2xl overflow-hidden"
                         style={{
@@ -162,14 +262,15 @@ const Visualizer: React.FC = () => {
 
                         <div
                             className="p-4 overflow-auto"
-                            style={{
-                                background: isDark ? '#080c14' : '#f1f5f9',
-                            }}
+                            style={{ background: isDark ? '#080c14' : '#f1f5f9' }}
                         >
                             <Grid
                                 grid={grid}
                                 onCellChange={handleCellChange}
+                                onEraseCell={handleEraseCell}
+                                onNodeMove={handleNodeMove}
                                 isDisabled={busy && !isPaused}
+                                drawMode={drawMode}
                                 isDark={isDark}
                             />
                         </div>

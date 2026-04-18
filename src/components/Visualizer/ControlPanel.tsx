@@ -12,6 +12,8 @@ interface ControlPanelProps {
     isRevealingPath: boolean;
     isMazeGenerating: boolean;
     speed: number;
+    drawMode: 'wall' | 'erase';
+    setDrawMode: (mode: 'wall' | 'erase') => void;
     handleStart: () => void;
     handlePause: () => void;
     handleResume: () => void;
@@ -28,7 +30,6 @@ interface ControlPanelProps {
 
 interface BtnDef {
     label: string;
-    busyLabel?: string;
     icon: React.ReactNode;
     busyIcon?: React.ReactNode;
     onClick: () => void;
@@ -45,7 +46,8 @@ const SpinnerIcon = () => (
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
     isRunning, isPaused, isDone, isRevealingPath, isMazeGenerating,
-    speed, handleStart, handlePause, handleResume, handleStop,
+    speed, drawMode, setDrawMode,
+    handleStart, handlePause, handleResume, handleStop,
     handleStep, handleClear, handleReset, handleGenerateMaze,
     setSpeed, isDark, sidebarOpen,
 }) => {
@@ -157,7 +159,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             },
         },
         {
-            label: isMazeGenerating ? 'Generating…' : 'Generate Maze',
+            label: isMazeGenerating ? 'Generating…' : 'Maze',
             icon: (
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
@@ -167,29 +169,38 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             onClick: handleGenerateMaze,
             disabled: isRunning || isRevealingPath || isMazeGenerating,
             isBusy: isMazeGenerating,
-            activeStyle: isMazeGenerating ? {
-                background: 'linear-gradient(135deg, #065f46, #10b981)',
-                border: '1px solid rgba(16,185,129,0.5)',
-                boxShadow: '0 0 16px rgba(16,185,129,0.4)',
-                color: 'white',
-            } : {
+            activeStyle: {
                 background: 'linear-gradient(135deg, #065f46, #10b981)',
                 border: '1px solid rgba(16,185,129,0.35)',
-                boxShadow: '0 0 14px rgba(16,185,129,0.25)',
+                boxShadow: isMazeGenerating ? '0 0 16px rgba(16,185,129,0.4)' : '0 0 14px rgba(16,185,129,0.25)',
                 color: 'white',
             },
         },
     ];
 
+    const drawModeBase: React.CSSProperties = {
+        borderRadius: '8px',
+        padding: '5px 12px',
+        fontSize: '12px',
+        fontWeight: 500,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px',
+        transition: 'all 0.15s ease',
+        cursor: busy ? 'not-allowed' : 'pointer',
+        opacity: busy ? 0.5 : 1,
+    };
+
     return (
         <div
-            className="px-4 py-3"
+            className="px-4 py-2"
             style={{
                 background: isDark ? 'rgba(8,12,20,0.8)' : 'rgba(248,250,252,0.8)',
                 borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(15,23,42,0.07)',
             }}
         >
             <div className={`flex flex-wrap items-center gap-2 ${!sidebarOpen ? 'justify-center' : ''}`}>
+                {/* Algorithm run controls */}
                 {buttons.map((btn) => (
                     <button
                         key={btn.label.replace('…', '')}
@@ -213,9 +224,64 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     </button>
                 ))}
 
+                {/* Draw mode toggle */}
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px',
+                        background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)',
+                        border: isDark ? '1px solid rgba(255,255,255,0.09)' : '1px solid rgba(15,23,42,0.09)',
+                        borderRadius: '10px',
+                        padding: '3px',
+                    }}
+                >
+                    <button
+                        onClick={() => !busy && setDrawMode('wall')}
+                        style={{
+                            ...drawModeBase,
+                            ...(drawMode === 'wall' ? {
+                                background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.1)',
+                                color: 'var(--foreground)',
+                                boxShadow: isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 4px rgba(15,23,42,0.1)',
+                            } : {
+                                background: 'transparent',
+                                color: 'var(--text-muted)',
+                            }),
+                        }}
+                        title="Draw walls (W)"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-3.5 h-3.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                        Wall
+                    </button>
+                    <button
+                        onClick={() => !busy && setDrawMode('erase')}
+                        style={{
+                            ...drawModeBase,
+                            ...(drawMode === 'erase' ? {
+                                background: 'rgba(239,68,68,0.15)',
+                                color: '#ef4444',
+                                boxShadow: '0 1px 4px rgba(239,68,68,0.2)',
+                                border: '1px solid rgba(239,68,68,0.25)',
+                            } : {
+                                background: 'transparent',
+                                color: 'var(--text-muted)',
+                            }),
+                        }}
+                        title="Erase cells (E)"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-3.5 h-3.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Erase
+                    </button>
+                </div>
+
                 {/* Speed slider */}
                 <div
-                    className="flex items-center gap-3 ml-2"
+                    className="flex items-center gap-3 ml-auto"
                     style={{
                         background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.04)',
                         border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(15,23,42,0.08)',
