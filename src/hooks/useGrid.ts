@@ -19,7 +19,7 @@ interface UseGridReturn {
     grid: GridMatrix;
     rows: number;
     cols: number;
-    setGrid: (grid: GridMatrix) => void;
+    setGrid: (grid: GridMatrix | ((prev: GridMatrix) => GridMatrix)) => void;
     toggleCell: (position: CellPosition) => void;
     updateSize: (newRows: number, newCols: number) => void;
     resetGrid: () => void;
